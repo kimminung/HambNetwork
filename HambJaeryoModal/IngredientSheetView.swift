@@ -1,5 +1,5 @@
 //
-//  Untitled.swift
+//  IngredientSheetView.swift
 //  HambJaeryoModal
 //
 //  Created by coulson on 5/28/25.
@@ -11,6 +11,7 @@ import FirebaseAI
 
 struct IngredientSheetView: View {
     @Binding var isPresented: Bool
+    @Binding var showHistory: Bool
     @State private var showResultSheet = false
     
     @State private var selectedItem: PhotosPickerItem?
@@ -26,8 +27,9 @@ struct IngredientSheetView: View {
     
     private var model: GenerativeModel?
 
-    init(isPresented: Binding<Bool>, firebaseService: FirebaseAI = FirebaseAI.firebaseAI()) {
+    init(isPresented: Binding<Bool>, showHistory: Binding<Bool>, firebaseService: FirebaseAI = FirebaseAI.firebaseAI()) {
             self._isPresented = isPresented               // Binding 초기화
+        self._showHistory  = showHistory
             self.model = firebaseService.generativeModel(modelName: "gemini-2.0-flash-001")
         }
     
@@ -105,6 +107,7 @@ struct IngredientSheetView: View {
                 dismissParentSheet: {
                     isPresented = false
                 },
+                showHistory: $showHistory,
                 menuName: menuName,
                 menuPrice: menuPrice,
                 image: selectedImage,
@@ -117,7 +120,7 @@ struct IngredientSheetView: View {
     // MARK: - Gemini API 호출 및 파싱
     func analyzeIngredients() async {
         guard let selectedImage else { return }
-        guard let imageData = selectedImage.jpegData(compressionQuality: 0.7) else { return }
+//        guard let imageData = selectedImage.jpegData(compressionQuality: 0.7) else { return }
         guard let model else { return }
         
         let prompt = """
@@ -136,8 +139,7 @@ struct IngredientSheetView: View {
         ]
         
         - 사용된 재료는 주재료 위주로 구성
-        - 재료 수는 5~10개 정도로 제한
-        - 'unitPrice'는 예측된 단가로 숫자만 제공
+        - 'unitPrice'는 'amount'의 단위 만큼만 사용했을 때 얼마인지 계산해줘.
         - 텍스트 설명 없이 JSON 배열만 출력
         """
         
@@ -161,9 +163,13 @@ struct IngredientSheetView: View {
                         jsonString = cleaned
                     }
 
-                    if let data = jsonString.data(using: .utf8) {
-                        parsedIngredients = try JSONDecoder().decode([IngredientInfo].self, from: data)
-                        showResultSheet = true
+            if let data = jsonString.data(using: .utf8) {
+                        let decoded = try JSONDecoder().decode([IngredientInfo].self, from: data)
+                        // 1️⃣ 결과 먼저 세팅
+                        await MainActor.run {
+                            parsedIngredients = decoded
+                            showResultSheet  = true   // 2️⃣ 값이 준비된 뒤 모달 오픈
+                        }
                     }
                 } catch {
                     print("Gemini API 호출 실패: \(error)")

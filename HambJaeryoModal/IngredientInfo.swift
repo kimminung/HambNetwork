@@ -1,11 +1,31 @@
 //
-//  Untitled.swift
+//  IngredientInfo.swift
 //  HambJaeryoModal
 //
 //  Created by coulson on 5/29/25.
 //
 
 import SwiftUI
+import SwiftData
+
+@Model
+final class IngredientEntity {
+    @Attribute(.unique) var id: UUID                // 고유 식별자
+    var menuName: String                            // 어떤 메뉴에 속한 재료인지
+    var name: String
+    var amount: String
+    var unitPrice: Int
+    var createdAt: Date
+
+    init(menuName: String, info: IngredientInfo, createdAt: Date = .now) {
+        self.id = info.id
+        self.menuName = menuName
+        self.name = info.name
+        self.amount = info.amount
+        self.unitPrice = info.unitPrice
+        self.createdAt = createdAt
+    }
+}
 
 struct IngredientInfo: Identifiable, Codable {
     // 리스트에 사용될 고유 id (JSON에 없음)

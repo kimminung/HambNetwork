@@ -6,10 +6,14 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct IngredientResultView: View {
+    @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
     let dismissParentSheet: () -> Void
+    @Binding var showHistory: Bool
+    
     let menuName: String
     let menuPrice: String
     let image: UIImage?
@@ -23,43 +27,71 @@ struct IngredientResultView: View {
                 Button("닫기") {
                     dismiss()
                 }
-
+                
                 Spacer()
-
+                
                 Text("계산 결과")
                     .font(.title2)
                     .bold()
-
+                
                 Spacer()
-
+                
                 Button(isEditing ? "완료" : "편집") {
                     isEditing.toggle()
                 }
             }
             .padding(.horizontal)
             .padding(.top)
-
+            
             Divider()
-
-            List {
-                ForEach(parsedIngredients) { ingredient in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(ingredient.name)
-                            .font(.headline)
-                        Text("사용량: \(ingredient.amount) / 단가: \(ingredient.unitPrice)원")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.vertical, 4)
+            /*
+             List {
+             ForEach(parsedIngredients) { ingredient in
+             VStack(alignment: .leading, spacing: 4) {
+             Text(ingredient.name)
+             .font(.headline)
+             Text("사용량: \(ingredient.amount) / 단가: \(ingredient.unitPrice)원")
+             .font(.subheadline)
+             .foregroundColor(.secondary)
+             }
+             .padding(.vertical, 4)
+             }
+             }*/
+            
+            List(parsedIngredients) { ing in
+                VStack(alignment: .leading) {
+                    Text(ing.name).font(.headline)
+                    Text("사용량: \(ing.amount) / 단가: \(ing.unitPrice)원")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
                 }
             }
-
+            
             Button("저장하고 모두 닫기") {
+                        do {
+                            for info in parsedIngredients { context.insert(IngredientEntity(menuName: menuName, info: info)) }
+                            try context.save()
+                            showHistory = true
+                            dismiss(); DispatchQueue.main.async { dismissParentSheet() }
+                        } catch { print("SwiftData save error:", error) }
+                    }
+            
+            /*
+            Button("저장하고 모두 닫기") {
+                parsedIngredients.forEach { info in
+                    context.insert(IngredientEntity(menuName: menuName, info: info))
+                }
+                try? context.save()
+                dismiss()
+                DispatchQueue.main.async{ dismissParentSheet() }
+        }*/
+            
+            /*Button("저장하고 모두 닫기") {
                 dismiss()
                 DispatchQueue.main.asyncAfter(deadline: .now()) {
                     dismissParentSheet()
                 }
-            }
+            }*/
             .font(.headline)
             .padding()
             .frame(maxWidth: .infinity)

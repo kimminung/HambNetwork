@@ -10,31 +10,37 @@ import PhotosUI
 import FirebaseAI
 
 struct IngredientSheetView: View {
-    @Binding var isPresented: Bool
-    @Binding var showHistory: Bool
-    @State private var showResultSheet = false
     
+    @Binding var showHistory: Bool
+    @State private var navigateToResult = false
     @State private var selectedItem: PhotosPickerItem?
     @State private var selectedImage: UIImage?
     @State private var menuName: String = ""
     @State private var menuPrice: String = ""
-    
     @State private var parsedIngredients: [IngredientInfo] = []
     
-//    let model = FirebaseAI.firebaseAI().generativeModel(modelName: "gemini-1.5-pro")
     
-//    let model = FirebaseAI.firebaseAI().generativeModel(modelName: "gemini-2.0-flash-001")
     
     private var model: GenerativeModel?
-
-    init(isPresented: Binding<Bool>, showHistory: Binding<Bool>, firebaseService: FirebaseAI = FirebaseAI.firebaseAI()) {
-            self._isPresented = isPresented               // Binding 초기화
-        self._showHistory  = showHistory
-            self.model = firebaseService.generativeModel(modelName: "gemini-2.0-flash-001")
-        }
+    
+    init(showHistory: Binding<Bool>, firebaseService: FirebaseAI = FirebaseAI.firebaseAI()) {
+        _showHistory  = showHistory
+        //            self.model = firebaseService.generativeModel(modelName: "gemini-1.5-pro")
+        self.model = firebaseService.generativeModel(modelName: "gemini-2.0-flash-001")
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
+            NavigationLink(
+                destination: IngredientResultView(
+                    showHistory: $showHistory,
+                    menuName: menuName,
+                    menuPrice: menuPrice,
+                    image: selectedImage,
+                    parsedIngredients: parsedIngredients
+                ),
+                isActive: $navigateToResult
+            ) { EmptyView() }
             Text("재료원가 계산")
                 .font(.title)
                 .padding(.top)
@@ -102,26 +108,14 @@ struct IngredientSheetView: View {
             .padding(.horizontal)
             .padding(.bottom, 30)
         }
-        .sheet(isPresented: $showResultSheet) {
-            IngredientResultView(
-                dismissParentSheet: {
-                    isPresented = false
-                },
-                showHistory: $showHistory,
-                menuName: menuName,
-                menuPrice: menuPrice,
-                image: selectedImage,
-                parsedIngredients: parsedIngredients
-            )
-        }
-        .presentationDetents([.large])
+        .navigationTitle("메뉴 관리")
     }
     
     // MARK: - Gemini API 호출 및 파싱
     func analyzeIngredients() async {
-        guard let selectedImage else { return }
-//        guard let imageData = selectedImage.jpegData(compressionQuality: 0.7) else { return }
-        guard let model else { return }
+        guard let selectedImage,
+              //        guard let imageData = selectedImage.jpegData(compressionQuality: 0.7) else { return }
+              let model else { return }
         
         let prompt = """
         음식 이름: \(menuName)
@@ -144,66 +138,37 @@ struct IngredientSheetView: View {
         """
         
         do {
-                    let parts: [any PartsRepresentable] = [selectedImage]
-                    var fullText = ""
-                    for try await content in try model.generateContentStream(prompt, parts) {
-                        if let line = content.text { fullText += line }
-                    }
-
-                    // 백틱 제거 및 JSON 추출
-                    let cleaned = fullText
-                        .replacingOccurrences(of: "```json", with: "")
-                        .replacingOccurrences(of: "```", with: "")
-                        .trimmingCharacters(in: .whitespacesAndNewlines)
-
-                    let jsonString: String
-                    if let first = cleaned.firstIndex(of: "["), let last = cleaned.lastIndex(of: "]") {
-                        jsonString = String(cleaned[first...last])
-                    } else {
-                        jsonString = cleaned
-                    }
-
+            let parts: [any PartsRepresentable] = [selectedImage]
+            var fullText = ""
+            for try await content in try model.generateContentStream(prompt, parts) {
+                if let line = content.text { fullText += line }
+            }
+            
+            // 백틱 제거 및 JSON 추출
+            let cleaned = fullText
+                .replacingOccurrences(of: "```json", with: "")
+                .replacingOccurrences(of: "```", with: "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            let jsonString: String
+            if let first = cleaned.firstIndex(of: "["), let last = cleaned.lastIndex(of: "]") {
+                jsonString = String(cleaned[first...last])
+            } else {
+                jsonString = cleaned
+            }
+            
             if let data = jsonString.data(using: .utf8) {
-                        let decoded = try JSONDecoder().decode([IngredientInfo].self, from: data)
-                        // 1️⃣ 결과 먼저 세팅
-                        await MainActor.run {
-                            parsedIngredients = decoded
-                            showResultSheet  = true   // 2️⃣ 값이 준비된 뒤 모달 오픈
-                        }
-                    }
-                } catch {
-                    print("Gemini API 호출 실패: \(error)")
+                let decoded = try JSONDecoder().decode([IngredientInfo].self, from: data)
+                // 1️⃣ 결과 먼저 세팅
+                await MainActor.run {
+                    parsedIngredients = decoded
+                    navigateToResult = true
                 }
+            }
+        } catch {
+            print("Gemini API 호출 실패: \(error)")
+        }
         
     }
     
 }
-
-/*
- import SwiftUI
- 
- struct IngredientSheetView: View {
- @Binding var isPresented: Bool
- @State private var showResultSheet = false
- 
- var body: some View {
- VStack {
- Text("재료원가 계산")
- .font(.title)
- 
- Spacer()
- 
- Button("재료원가 계산하기") {
- showResultSheet = true
- }
- .padding()
- }
- .presentationDetents([.large])
- .sheet(isPresented: $showResultSheet) {
- IngredientResultView(dismissParentSheet: {
- isPresented = false
- })
- }
- }
- }
- */

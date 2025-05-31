@@ -9,28 +9,29 @@ import SwiftUI
 import SwiftData
 
 struct ContentView: View {
-    @State private var showSheet = false
+    @State private var showAddMenu = false
     @State private var showHistory = false
     
     var body: some View {
         NavigationStack {
             List {
                 Button("나의 메뉴 +") {
-                    showSheet = true
+                    showAddMenu = true
                 }
                 .font(.headline)
+                NavigationLink(
+                    destination: IngredientSheetView(showHistory: $showHistory),
+                    isActive: $showAddMenu
+                ) { EmptyView() }
                 
-                NavigationLink("저장된 재료 내역", destination: IngredientHistoryView()).opacity(0)
+                NavigationLink(
+                    "저장된 재료 내역",
+                    destination: IngredientHistoryView()).opacity(0)
             }
             .navigationDestination(isPresented: $showHistory) {
                 IngredientHistoryView()
             }
             .navigationTitle("HambJaeryo")
-            .sheet(isPresented: $showSheet) {
-                IngredientSheetView(isPresented: $showSheet,
-                                    showHistory: $showHistory)
-            }
-
         }
     }
 }

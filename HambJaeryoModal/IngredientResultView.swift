@@ -11,16 +11,15 @@ import SwiftData
 struct IngredientResultView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
-    let dismissParentSheet: () -> Void
     @Binding var showHistory: Bool
     
     let menuName: String
     let menuPrice: String
     let image: UIImage?
     let parsedIngredients: [IngredientInfo]
-
+    
     @State private var isEditing = false
-
+    
     var body: some View {
         VStack {
             HStack {
@@ -44,19 +43,6 @@ struct IngredientResultView: View {
             .padding(.top)
             
             Divider()
-            /*
-             List {
-             ForEach(parsedIngredients) { ingredient in
-             VStack(alignment: .leading, spacing: 4) {
-             Text(ingredient.name)
-             .font(.headline)
-             Text("사용량: \(ingredient.amount) / 단가: \(ingredient.unitPrice)원")
-             .font(.subheadline)
-             .foregroundColor(.secondary)
-             }
-             .padding(.vertical, 4)
-             }
-             }*/
             
             List(parsedIngredients) { ing in
                 VStack(alignment: .leading) {
@@ -68,30 +54,14 @@ struct IngredientResultView: View {
             }
             
             Button("저장하고 모두 닫기") {
-                        do {
-                            for info in parsedIngredients { context.insert(IngredientEntity(menuName: menuName, info: info)) }
-                            try context.save()
-                            showHistory = true
-                            dismiss(); DispatchQueue.main.async { dismissParentSheet() }
-                        } catch { print("SwiftData save error:", error) }
-                    }
-            
-            /*
-            Button("저장하고 모두 닫기") {
-                parsedIngredients.forEach { info in
-                    context.insert(IngredientEntity(menuName: menuName, info: info))
-                }
-                try? context.save()
-                dismiss()
-                DispatchQueue.main.async{ dismissParentSheet() }
-        }*/
-            
-            /*Button("저장하고 모두 닫기") {
-                dismiss()
-                DispatchQueue.main.asyncAfter(deadline: .now()) {
-                    dismissParentSheet()
-                }
-            }*/
+                do {
+                    for info in parsedIngredients { context.insert(IngredientEntity(menuName: menuName, info: info)) }
+                    try context.save()
+                    showHistory = true
+                    //                            dismiss(); DispatchQueue.main.async { dismissParentSheet() }
+                    dismiss()
+                } catch { print("SwiftData save error:", error) }
+            }
             .font(.headline)
             .padding()
             .frame(maxWidth: .infinity)
@@ -100,69 +70,6 @@ struct IngredientResultView: View {
             .cornerRadius(12)
             .padding()
         }
-        .presentationDetents([.large])
+        .navigationTitle("결과")
     }
 }
-
-
-/*
-struct IngredientResultView: View {
-    @Environment(\.dismiss) private var dismiss
-    let dismissParentSheet: () -> Void
-    @State private var isEditing = false
-    
-    var body: some View {
-        VStack {
-            // 상단 바
-            HStack {
-                Button("닫기") {
-                    dismiss()
-                }
-                
-                Spacer()
-                
-                Text("계산 결과")
-                    .font(.title2)
-                    .bold()
-                
-                Spacer()
-                
-                Button(isEditing ? "완료" : "편집") {
-                    isEditing.toggle()
-                }
-            }
-            .padding(.horizontal)
-            .padding(.top)
-            
-            Divider()
-            
-            // 여기에 편집 여부에 따라 달라지는 내용 등 표시 가능
-            VStack {
-                if isEditing {
-                    Text("편집 중입니다...")
-                } else {
-                    Text("계산된 재료 결과를 보여주는 영역")
-                }
-                
-                Spacer()
-                
-                Button("저장하고 모두 닫기") {
-                    dismiss()
-                    DispatchQueue.main.asyncAfter(deadline: .now()) {
-                        dismissParentSheet()
-                    }
-                }
-                .font(.headline)
-                .padding()
-                .frame(maxWidth: .infinity)
-                .background(Color.green)
-                .foregroundColor(.white)
-                .cornerRadius(12)
-                .padding()
-            }
-            .padding()
-        }
-        .presentationDetents([.large])
-    }
-}
-*/

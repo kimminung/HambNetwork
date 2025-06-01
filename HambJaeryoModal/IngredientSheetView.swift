@@ -43,19 +43,6 @@ struct IngredientSheetView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             
-            
-            NavigationLink(
-                destination: IngredientResultView(
-                    selectedMenuName: $selectedMenuName, showAddMenu: $showAddMenu,
-                    menuName: menuName,
-                    menuPrice: menuPrice,
-                    image: selectedImage,
-                    parsedIngredients: parsedIngredients
-                ),
-                isActive: $navigateToResult
-            ) { EmptyView() }
-            
-            
             PhotosPicker(
                 selection: $selectedItem,
                 matching: .images,
@@ -117,6 +104,22 @@ struct IngredientSheetView: View {
             .padding(.bottom, 30)
         }
         .navigationTitle("재료원가계산")
+        // ── iOS 16+ navigationDestination 사용 ─────────────────────────
+        .navigationDestination(
+            isPresented: $navigateToResult,
+            destination: {
+                // parsedIngredients가 채워진 직후 navigateToResult가 true가 되면,
+                // IngredientResultView가 푸시(=push)됩니다.
+                IngredientResultView(
+                    selectedMenuName: $selectedMenuName,
+                    showAddMenu:      $showAddMenu,
+                    menuName:         menuName,
+                    menuPrice:        menuPrice,
+                    image:            selectedImage,
+                    parsedIngredients: parsedIngredients
+                )
+            }
+        )
     }
     
     // MARK: - Gemini API 호출 및 파싱
@@ -169,28 +172,6 @@ struct IngredientSheetView: View {
             // 1️⃣ – Main Thread에서 상태 갱신 및 저장 수행
             await MainActor.run {
                 parsedIngredients = decoded
-                
-                // 2️⃣ – SwiftData에 저장
-                let priceValue = Int(menuPrice) ?? 0
-                let imageData: Data? = selectedImage.jpegData(compressionQuality: 0.8)
-                
-                for info in parsedIngredients {
-                    let entity = IngredientEntity(
-                        menuName:  menuName,
-                        menuPrice: priceValue,
-                        imageData: imageData,
-                        info:      info
-                    )
-                    context.insert(entity)
-                }
-                
-                do {
-                    try context.save()
-                    print("✅ SwiftData에 저장 완료: \(parsedIngredients.count)개 항목 삽입")
-                    selectedMenuName = menuName
-                } catch {
-                    print("⚠️ 저장 실패:", error)
-                }
                 
                 // 3️⃣ – 저장이 끝나면 화면 전환
                 navigateToResult = true

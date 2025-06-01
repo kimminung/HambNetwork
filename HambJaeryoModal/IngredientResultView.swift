@@ -130,6 +130,10 @@ struct IngredientResultView: View {
         .ignoresSafeArea(.keyboard)
         .navigationBarBackButtonHidden(true)
         .navigationTitle("재료관리")
+        
+        .onAppear {
+                    print("🟡 [Debug] IngredientResultView 진입, parsedIngredients.count = \(parsedIngredients.count)")
+                }
     }
     
     // MARK: - 저장 & 루트 복귀
@@ -141,6 +145,9 @@ struct IngredientResultView: View {
             // 2️⃣ 이미지(UIImage → Data) 변환 (JPEG 80% 압축)
             let imageData: Data? = image?.jpegData(compressionQuality: 0.8)
             
+            
+            var insertedCount = 0
+            
             // 3️⃣ parsedIngredients 배열을 순회하며, 각 재료마다
             //    “같은 메뉴 이름·가격·이미지”를 포함해 삽입
             for info in parsedIngredients {
@@ -151,17 +158,27 @@ struct IngredientResultView: View {
                     info: info
                 )
                 context.insert(entity)
+                insertedCount += 1
             }
+            print("🚀 [Debug] 삽입할 Entity 수: \(insertedCount)")
             
             // 5️⃣ 실제 저장
             try context.save()
+            print("✅ [Debug] context.save() 성공, 총 엔티티 개수: \(insertedCount)")
+            
             
             // 6️⃣ 저장 후 루트 복귀
             selectedMenuName = menuName
-            showAddMenu      = false
+            //            showAddMenu      = false
+            
+            
+            // 아주 짧게 0.1초 후에 showAddMenu를 false로 변경 → Context 반영 시간을 벌어줍니다
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                showAddMenu = false
+            }
             
         } catch {
-            print("SwiftData save error:", error)
+            print("❌ [Error] SwiftData save error:", error)
         }
     }
 }

@@ -38,6 +38,16 @@ struct ContentView: View {
                 .font(.headline)
                 .padding(.vertical, 10)
                 
+                
+                // ── 디버그: List가 렌더링될 때마다 allIngredients.count 찍기 ──
+                VStack {
+                    Text("🟣 Debug – allIngredients.count = \(allIngredients.count)")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                        .padding(.horizontal, 10)
+                    // 필요하다면 두 번 이상 찍히는지 확인하기 위해 onChange도 추가할 수 있습니다.
+                }
+                
                 // ── 메뉴 목록 (각 행을 MenuRowView로 분리) ─────────
                 List {
                     ForEach(menuNames, id: \.self) { name in
@@ -53,6 +63,18 @@ struct ContentView: View {
                     showAddMenu:      $showAddMenu,
                     selectedMenuName: $selectedMenuName
                 )
+            }
+        }
+        // ── 디버그: allIngredients의 변화 감지
+        .onChange(of: allIngredients.count) { newCount in
+            print("🔵 [Debug] allIngredients.count changed to \(newCount)")
+        }
+        // ── 디버그: selectedMenuName이 바뀌면 showAddMenu를 false로 (IngredientSheetView를 강제 팝)
+        .onChange(of: selectedMenuName) { newValue in
+            if !newValue.isEmpty {
+                // “메뉴 등록” 직후: 이 코드를 통해 showAddMenu가 false가 되어
+                // IngredientSheetView + IngredientResultView가 모두 팝됩니다.
+                showAddMenu = false
             }
         }
     }

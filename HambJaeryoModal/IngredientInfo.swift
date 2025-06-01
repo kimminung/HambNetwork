@@ -11,15 +11,32 @@ import SwiftData
 @Model
 final class IngredientEntity {
     @Attribute(.unique) var id: UUID                // 고유 식별자
-    var menuName: String                            // 어떤 메뉴에 속한 재료인지
+    
+    
+    var menuName: String
+    var menuPrice: Int
+    var imageData: Data?
+    
+    
     var name: String
     var amount: String
     var unitPrice: Int
     var createdAt: Date
     
-    init(menuName: String, info: IngredientInfo, createdAt: Date = .now) {
+    
+    init(
+        menuName: String,
+        menuPrice: Int,
+        imageData: Data?,
+        info: IngredientInfo,
+        createdAt: Date = .now
+    ) {
         self.id = info.id
         self.menuName = menuName
+        self.menuPrice = menuPrice
+        self.imageData = imageData
+        
+        
         self.name = info.name
         self.amount = info.amount
         self.unitPrice = info.unitPrice

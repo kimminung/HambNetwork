@@ -8,10 +8,13 @@
 import SwiftUI
 import PhotosUI
 import FirebaseAI
+import SwiftData
 
 struct IngredientSheetView: View {
     
-    @Binding var showHistory: Bool
+    @Binding var showAddMenu: Bool
+    @Binding var selectedMenuName: String
+    
     @State private var navigateToResult = false
     @State private var selectedItem: PhotosPickerItem?
     @State private var selectedImage: UIImage?
@@ -20,20 +23,30 @@ struct IngredientSheetView: View {
     @State private var parsedIngredients: [IngredientInfo] = []
     
     
+    @Environment(\.modelContext) private var context
+    
     
     private var model: GenerativeModel?
     
-    init(showHistory: Binding<Bool>, firebaseService: FirebaseAI = FirebaseAI.firebaseAI()) {
-        _showHistory  = showHistory
+    
+    init(
+        showAddMenu: Binding<Bool>,
+        selectedMenuName: Binding<String>,
+        firebaseService: FirebaseAI = FirebaseAI.firebaseAI()
+    ) {
+        _showAddMenu  = showAddMenu
+        _selectedMenuName = selectedMenuName
         //            self.model = firebaseService.generativeModel(modelName: "gemini-1.5-pro")
         self.model = firebaseService.generativeModel(modelName: "gemini-2.0-flash-001")
     }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
+            
+            
             NavigationLink(
                 destination: IngredientResultView(
-                    showHistory: $showHistory,
+                    selectedMenuName: $selectedMenuName, showAddMenu: $showAddMenu,
                     menuName: menuName,
                     menuPrice: menuPrice,
                     image: selectedImage,
@@ -41,10 +54,7 @@ struct IngredientSheetView: View {
                 ),
                 isActive: $navigateToResult
             ) { EmptyView() }
-            Text("재료원가 계산")
-                .font(.title)
-                .padding(.top)
-                .frame(maxWidth: .infinity, alignment: .center)
+            
             
             PhotosPicker(
                 selection: $selectedItem,
@@ -95,9 +105,7 @@ struct IngredientSheetView: View {
             Spacer()
             
             Button("재료원가 계산하기") {
-                Task {
-                    await analyzeIngredients()
-                }
+                Task { await analyzeIngredients() }
             }
             .font(.headline)
             .padding()
@@ -108,7 +116,7 @@ struct IngredientSheetView: View {
             .padding(.horizontal)
             .padding(.bottom, 30)
         }
-        .navigationTitle("메뉴 관리")
+        .navigationTitle("재료원가계산")
     }
     
     // MARK: - Gemini API 호출 및 파싱
@@ -126,7 +134,7 @@ struct IngredientSheetView: View {
         [
           {
             "name": "재료명",
-            "amount": "사용량 및 단위 (예: 2큰술, 100g)",
+            "amount": "사용량 및 그램단위 (예: 100g)",
             "unitPrice": 단위 원가 (숫자, 원 단위)
           },
           ...
@@ -140,8 +148,8 @@ struct IngredientSheetView: View {
         do {
             let parts: [any PartsRepresentable] = [selectedImage]
             var fullText = ""
-            for try await content in try model.generateContentStream(prompt, parts) {
-                if let line = content.text { fullText += line }
+            for try await chunk in try model.generateContentStream(prompt, parts) {
+                if let text = chunk.text { fullText += text }
             }
             
             // 백틱 제거 및 JSON 추출
@@ -150,25 +158,47 @@ struct IngredientSheetView: View {
                 .replacingOccurrences(of: "```", with: "")
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             
-            let jsonString: String
-            if let first = cleaned.firstIndex(of: "["), let last = cleaned.lastIndex(of: "]") {
-                jsonString = String(cleaned[first...last])
-            } else {
-                jsonString = cleaned
+            guard
+                let first = cleaned.firstIndex(of: "["),
+                let last  = cleaned.lastIndex(of: "]"),
+                let data  = String(cleaned[first...last]).data(using: .utf8)
+            else { return }
+            
+            
+            let decoded = try JSONDecoder().decode([IngredientInfo].self, from: data)
+            // 1️⃣ – Main Thread에서 상태 갱신 및 저장 수행
+            await MainActor.run {
+                parsedIngredients = decoded
+                
+                // 2️⃣ – SwiftData에 저장
+                let priceValue = Int(menuPrice) ?? 0
+                let imageData: Data? = selectedImage.jpegData(compressionQuality: 0.8)
+                
+                for info in parsedIngredients {
+                    let entity = IngredientEntity(
+                        menuName:  menuName,
+                        menuPrice: priceValue,
+                        imageData: imageData,
+                        info:      info
+                    )
+                    context.insert(entity)
+                }
+                
+                do {
+                    try context.save()
+                    print("✅ SwiftData에 저장 완료: \(parsedIngredients.count)개 항목 삽입")
+                    selectedMenuName = menuName
+                } catch {
+                    print("⚠️ 저장 실패:", error)
+                }
+                
+                // 3️⃣ – 저장이 끝나면 화면 전환
+                navigateToResult = true
             }
             
-            if let data = jsonString.data(using: .utf8) {
-                let decoded = try JSONDecoder().decode([IngredientInfo].self, from: data)
-                // 1️⃣ 결과 먼저 세팅
-                await MainActor.run {
-                    parsedIngredients = decoded
-                    navigateToResult = true
-                }
-            }
         } catch {
             print("Gemini API 호출 실패: \(error)")
         }
         
     }
-    
 }

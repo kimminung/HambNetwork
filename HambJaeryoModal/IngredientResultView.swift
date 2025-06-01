@@ -18,12 +18,45 @@ struct IngredientResultView: View {
     let menuName: String
     let menuPrice: String
     let image: UIImage?
-    let parsedIngredients: [IngredientInfo]
+    //    let parsedIngredients: [IngredientInfo]
+    
+    
+    // AI가 파싱해준 초기 재료들을 이 State 배열로 복사하여 관리합니다.
+    @State private var ingredients: [IngredientInfo]
+    
+    // “재료 추가하기” 시트를 띄우기 위한 플래그
+    @State private var showAddSheet = false
+    
+    // 시트 안에서 입력할 새 재료의 임시 변수들
+    @State private var newName: String = ""
+    @State private var newAmount: String = ""
+    @State private var newUnitPrice: String = ""
     
     
     private var totalCost: Int {
-        parsedIngredients.reduce(0) { $0 + $1.unitPrice }
+//        parsedIngredients.reduce(0) { $0 + $1.unitPrice }
+        ingredients.reduce(0) { $0 + $1.unitPrice }
     }
+    
+    
+    // 초기화 시 parsedIngredients를 ingredients에 복사
+    init(
+        selectedMenuName: Binding<String>,
+        showAddMenu: Binding<Bool>,
+        menuName: String,
+        menuPrice: String,
+        image: UIImage?,
+        parsedIngredients: [IngredientInfo]
+    ) {
+        _selectedMenuName = selectedMenuName
+        _showAddMenu = showAddMenu
+        self.menuName = menuName
+        self.menuPrice = menuPrice
+        self.image = image
+        // parsedIngredients를 State인 ingredients로 복사
+        _ingredients = State(initialValue: parsedIngredients)
+    }
+    
     
     var body: some View {
         VStack(spacing: 0) {
@@ -65,7 +98,8 @@ struct IngredientResultView: View {
             
             // ── 재료 리스트 ──────────────────────────────────
             List {
-                ForEach(parsedIngredients) { ing in
+                //                ForEach(parsedIngredients) { ing in
+                ForEach(ingredients) { ing in
                     HStack {
                         // 간단 아이콘 (재료 첫 글자 이모지 활용)
                         Text(String(ing.name.first ?? "🥘"))
@@ -90,7 +124,8 @@ struct IngredientResultView: View {
                     .listRowSeparator(.hidden)
                 }
                 Button {
-                    // 추가 로직 Hook (선택)
+                    // 추가 로직 Hook
+                    showAddSheet = true
                 } label: {
                     HStack {
                         Image(systemName: "plus.circle.fill")
@@ -132,8 +167,67 @@ struct IngredientResultView: View {
         .navigationTitle("재료관리")
         
         .onAppear {
-                    print("🟡 [Debug] IngredientResultView 진입, parsedIngredients.count = \(parsedIngredients.count)")
+            print("🟡 [Debug] IngredientResultView 진입, parsedIngredients.count = \(ingredients.count)")
+        }
+        // ── “재료 추가하기”를 위한 시트 ─────────────────────────────────
+        .sheet(isPresented: $showAddSheet) {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("새 재료 추가")
+                    .font(.headline)
+                    .padding(.bottom, 10)
+                
+                Group {
+                    Text("재료명")
+                        .font(.subheadline)
+                    TextField("예: 당근", text: $newName)
+                        .textFieldStyle(.roundedBorder)
+                    
+                    Text("사용량")
+                        .font(.subheadline)
+                    TextField("예: 100g", text: $newAmount)
+                        .textFieldStyle(.roundedBorder)
+                    
+                    Text("단위 원가")
+                        .font(.subheadline)
+                    TextField("예: 500", text: $newUnitPrice)
+                        .textFieldStyle(.roundedBorder)
+                        .keyboardType(.numberPad)
                 }
+                
+                HStack {
+                    Spacer()
+                    Button("취소") {
+                        // 입력 취소
+                        newName = ""
+                        newAmount = ""
+                        newUnitPrice = ""
+                        showAddSheet = false
+                    }
+                    .padding(.trailing, 20)
+                    
+                    Button("저장") {
+                        // 새 재료를 배열에 추가
+                        if let price = Int(newUnitPrice), !newName.isEmpty, !newAmount.isEmpty {
+                            let newIng = IngredientInfo(
+                                name: newName,
+                                amount: newAmount,
+                                unitPrice: price
+                            )
+                            ingredients.append(newIng)
+                            
+                            // 입력 필드 초기화
+                            newName = ""
+                            newAmount = ""
+                            newUnitPrice = ""
+                            showAddSheet = false
+                        }
+                    }
+                    .disabled(newName.isEmpty || newAmount.isEmpty || Int(newUnitPrice) == nil)
+                }
+                .padding(.top, 20)
+            }
+            .padding()
+        }
     }
     
     // MARK: - 저장 & 루트 복귀
@@ -150,7 +244,7 @@ struct IngredientResultView: View {
             
             // 3️⃣ parsedIngredients 배열을 순회하며, 각 재료마다
             //    “같은 메뉴 이름·가격·이미지”를 포함해 삽입
-            for info in parsedIngredients {
+            for info in ingredients {
                 let entity = IngredientEntity(
                     menuName: menuName,
                     menuPrice: priceValue,

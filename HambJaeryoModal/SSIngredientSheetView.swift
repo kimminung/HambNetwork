@@ -1,5 +1,5 @@
 //
-//  IngredientSheetView.swift
+//  SSIngredientSheetView.swift
 //  HambJaeryoModal
 //
 //  Created by coulson on 5/28/25.
@@ -10,7 +10,7 @@ import PhotosUI
 import FirebaseAI
 import SwiftData
 
-struct IngredientSheetView: View {
+struct SSIngredientSheetView: View {
     
     @Binding var showAddMenu: Bool
     @Binding var selectedMenuName: String
@@ -110,7 +110,7 @@ struct IngredientSheetView: View {
             destination: {
                 // parsedIngredients가 채워진 직후 navigateToResult가 true가 되면,
                 // IngredientResultView가 푸시(=push)됩니다.
-                IngredientResultView(
+                SSIngredientResultView(
                     selectedMenuName: $selectedMenuName,
                     showAddMenu:      $showAddMenu,
                     menuName:         menuName,

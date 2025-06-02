@@ -8,8 +8,8 @@ import SwiftUI
 import SwiftData
 
 struct IngredientHistoryView: View {
-    @Query(sort: \IngredientEntity.createdAt, order: .reverse)
-    private var items: [IngredientEntity]
+    @Query(sort: \SSIngredientEntity.createdAt, order: .reverse)
+    private var items: [SSIngredientEntity]
     var body: some View {
         List(items) { e in
             VStack(alignment: .leading) {

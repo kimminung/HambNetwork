@@ -1,5 +1,5 @@
 //
-//  IngredientResultView.swift
+//  SSIngredientResultView.swift
 //  HambJaeryoModal
 //
 //  Created by coulson on 5/29/25.
@@ -8,7 +8,7 @@
 import SwiftUI
 import SwiftData
 
-struct IngredientResultView: View {
+struct SSIngredientResultView: View {
     @Environment(\.modelContext) private var context
     
     
@@ -24,13 +24,8 @@ struct IngredientResultView: View {
     // AI가 파싱해준 초기 재료들을 이 State 배열로 복사하여 관리합니다.
     @State private var ingredients: [IngredientInfo]
     
-    // “재료 추가하기” 시트를 띄우기 위한 플래그
-    @State private var showAddSheet = false
-    
-    // 시트 안에서 입력할 새 재료의 임시 변수들
-    @State private var newName: String = ""
-    @State private var newAmount: String = ""
-    @State private var newUnitPrice: String = ""
+    // “재료 추가하기” 네비게이션 푸시 트리거
+    @State private var navigateToSearch = false
     
     
     private var totalCost: Int {
@@ -125,7 +120,7 @@ struct IngredientResultView: View {
                 }
                 Button {
                     // 추가 로직 Hook
-                    showAddSheet = true
+                    navigateToSearch = true
                 } label: {
                     HStack {
                         Image(systemName: "plus.circle.fill")
@@ -163,71 +158,31 @@ struct IngredientResultView: View {
             )
         }
         .ignoresSafeArea(.keyboard)
-        .navigationBarBackButtonHidden(true)
+//        .navigationBarBackButtonHidden(true)
         .navigationTitle("재료관리")
         
         .onAppear {
             print("🟡 [Debug] IngredientResultView 진입, parsedIngredients.count = \(ingredients.count)")
         }
-        // ── “재료 추가하기”를 위한 시트 ─────────────────────────────────
-        .sheet(isPresented: $showAddSheet) {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("새 재료 추가")
-                    .font(.headline)
-                    .padding(.bottom, 10)
-                
-                Group {
-                    Text("재료명")
-                        .font(.subheadline)
-                    TextField("예: 당근", text: $newName)
-                        .textFieldStyle(.roundedBorder)
-                    
-                    Text("사용량")
-                        .font(.subheadline)
-                    TextField("예: 100g", text: $newAmount)
-                        .textFieldStyle(.roundedBorder)
-                    
-                    Text("단위 원가")
-                        .font(.subheadline)
-                    TextField("예: 500", text: $newUnitPrice)
-                        .textFieldStyle(.roundedBorder)
-                        .keyboardType(.numberPad)
-                }
-                
-                HStack {
-                    Spacer()
-                    Button("취소") {
-                        // 입력 취소
-                        newName = ""
-                        newAmount = ""
-                        newUnitPrice = ""
-                        showAddSheet = false
+        // ── 네비게이션 푸시 방식으로 SSAddIngredientView 연결 ─────────────────────────
+        .navigationDestination(
+            isPresented: $navigateToSearch,
+            destination: {
+                SSAddIngredientView { selectedItemName in
+                    // 네비게이션에서 돌아올 때 호출됨
+                    // 유효한 재료명이라면 ingredients에 append
+                    if !selectedItemName.isEmpty {
+                        let newIng = IngredientInfo(
+                            name: selectedItemName,
+                            amount: "0g",
+                            unitPrice: 0
+                        )
+                        ingredients.append(newIng)
                     }
-                    .padding(.trailing, 20)
-                    
-                    Button("저장") {
-                        // 새 재료를 배열에 추가
-                        if let price = Int(newUnitPrice), !newName.isEmpty, !newAmount.isEmpty {
-                            let newIng = IngredientInfo(
-                                name: newName,
-                                amount: newAmount,
-                                unitPrice: price
-                            )
-                            ingredients.append(newIng)
-                            
-                            // 입력 필드 초기화
-                            newName = ""
-                            newAmount = ""
-                            newUnitPrice = ""
-                            showAddSheet = false
-                        }
-                    }
-                    .disabled(newName.isEmpty || newAmount.isEmpty || Int(newUnitPrice) == nil)
+                    // 화면이 자동으로 뒤로 팝됩니다(SSAddIngredientView에서 dismiss 처리).
                 }
-                .padding(.top, 20)
             }
-            .padding()
-        }
+        )
     }
     
     // MARK: - 저장 & 루트 복귀
@@ -245,7 +200,7 @@ struct IngredientResultView: View {
             // 3️⃣ parsedIngredients 배열을 순회하며, 각 재료마다
             //    “같은 메뉴 이름·가격·이미지”를 포함해 삽입
             for info in ingredients {
-                let entity = IngredientEntity(
+                let entity = SSIngredientEntity(
                     menuName: menuName,
                     menuPrice: priceValue,
                     imageData: imageData,

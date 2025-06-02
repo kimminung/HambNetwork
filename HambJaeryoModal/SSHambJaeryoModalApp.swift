@@ -1,6 +1,6 @@
 //
-//  HambJaeryoModalApp.swift
-//  HambJaeryoModal
+//  SSHambJaeryoModalApp.swift
+//  SSHambJaeryoModal
 //
 //  Created by coulson on 5/28/25.
 //
@@ -22,15 +22,15 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 
 
 @main
-struct HambJaeryoModalApp: App {
+struct SSHambJaeryoModalApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     
     
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            SSMenuMainView()
                 .modelContainer(for: [
-                    IngredientEntity.self
+                    SSIngredientEntity.self
                 ])
         }
     }

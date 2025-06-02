@@ -8,13 +8,13 @@
 import SwiftUI
 import SwiftData
 
-struct ContentView: View {
+struct SSMenuMainView: View {
     @State private var showAddMenu      = false
     @State private var selectedMenuName = ""
     
     // SwiftData에서 모든 IngredientEntity를 최신순(createdAt)으로 가져옴
-    @Query(sort: \IngredientEntity.createdAt, order: .reverse)
-    private var allIngredients: [IngredientEntity]
+    @Query(sort: \SSIngredientEntity.createdAt, order: .reverse)
+    private var allIngredients: [SSIngredientEntity]
     
     @Environment(\.modelContext) private var context
     
@@ -51,7 +51,7 @@ struct ContentView: View {
                 // ── 메뉴 목록 (각 행을 MenuRowView로 분리) ─────────
                 List {
                     ForEach(menuNames, id: \.self) { name in
-                        MenuRowView(menuName: name)
+                        SSMenuRowViewCell(menuName: name)
                     }
                 }
             }
@@ -59,7 +59,7 @@ struct ContentView: View {
             
             // ── “나의 메뉴 +” → IngredientSheetView ─────────
             .navigationDestination(isPresented: $showAddMenu) {
-                IngredientSheetView(
+                SSIngredientSheetView(
                     showAddMenu:      $showAddMenu,
                     selectedMenuName: $selectedMenuName
                 )
@@ -80,9 +80,9 @@ struct ContentView: View {
     }
     
     // ── Helper: 해당 메뉴명에 속한 IngredientEntity 모두 fetch ─────────
-    private func fetchEntities(for menuName: String) -> [IngredientEntity] {
-        let predicate = #Predicate<IngredientEntity> { $0.menuName == menuName }
-        let descriptor = FetchDescriptor<IngredientEntity>(
+    private func fetchEntities(for menuName: String) -> [SSIngredientEntity] {
+        let predicate = #Predicate<SSIngredientEntity> { $0.menuName == menuName }
+        let descriptor = FetchDescriptor<SSIngredientEntity>(
             predicate: predicate,
             sortBy:    [SortDescriptor(\.createdAt, order: .reverse)]
         )
@@ -96,6 +96,6 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView()
-        .modelContainer(for: [IngredientEntity.self], inMemory: true)
+    SSMenuMainView()
+        .modelContainer(for: [SSIngredientEntity.self], inMemory: true)
 }

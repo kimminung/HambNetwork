@@ -1,5 +1,5 @@
 //
-//  MenuRowView.swift
+//  MenuRowViewCell.swift
 //  HambJaeryoModal
 //
 //  Created by coulson on 5/28/25.
@@ -8,15 +8,15 @@
 import SwiftUI
 import SwiftData
 
-struct MenuRowView: View {
+struct SSMenuRowViewCell: View {
     let menuName: String
     
     @Environment(\.modelContext) private var context
     
     /// 해당 메뉴명에 속한 IngredientEntity를 모두 가져오는 computed 프로퍼티
-    private var matchedEntities: [IngredientEntity] {
-        let predicate = #Predicate<IngredientEntity> { $0.menuName == menuName }
-        let descriptor = FetchDescriptor<IngredientEntity>(
+    private var matchedEntities: [SSIngredientEntity] {
+        let predicate = #Predicate<SSIngredientEntity> { $0.menuName == menuName }
+        let descriptor = FetchDescriptor<SSIngredientEntity>(
             predicate: predicate,
             sortBy:    [SortDescriptor(\.createdAt, order: .reverse)]
         )
@@ -29,7 +29,7 @@ struct MenuRowView: View {
     }
     
     /// 헤더용 엔티티(이미지·가격)로 사용할 첫 번째 항목
-    private var headerEntity: IngredientEntity? {
+    private var headerEntity: SSIngredientEntity? {
         matchedEntities.first
     }
     
@@ -65,7 +65,7 @@ struct MenuRowView: View {
     var body: some View {
         NavigationLink {
             // Destination: IngredientResultView
-            IngredientResultView(
+            SSIngredientResultView(
                 selectedMenuName: .constant(menuName),
                 showAddMenu:      .constant(false),
                 menuName:         menuName,
@@ -106,6 +106,6 @@ struct MenuRowView: View {
 
 #Preview {
     // Preview를 위해 더미 데이터를 넣어볼 수도 있습니다.
-    MenuRowView(menuName: "예시메뉴")
-        .modelContainer(for: [IngredientEntity.self], inMemory: true)
+    SSMenuRowViewCell(menuName: "예시메뉴")
+        .modelContainer(for: [SSIngredientEntity.self], inMemory: true)
 }
